@@ -1,9 +1,9 @@
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from .forms import CustomUserCreationForm
-from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
+from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView
+
+from .forms import CustomUserCreationForm
 from .models import CustomUser
 
 class SignUpView(SuccessMessageMixin, CreateView):
