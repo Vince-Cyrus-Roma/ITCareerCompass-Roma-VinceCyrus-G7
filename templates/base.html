@@ -37,6 +37,9 @@
         <div class="d-flex align-items-center gap-2">
           {% if user.is_authenticated %}
           <span class="text-light">Hi, {{ user.username }}!</span>
+          <a class="btn btn-outline-light btn-sm" href="{% url 'profile' %}"
+            >Profile</a
+          >
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-light btn-sm">
@@ -54,6 +57,12 @@
         </div>
       </div>
     </nav>
-    <main class="container">{% block content %}{% endblock %}</main>
+    <main class="container">
+      {% if messages %} {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+      </div>
+      {% endfor %} {% endif %} {% block content %}{% endblock %}
+    </main>
   </body>
 </html>
