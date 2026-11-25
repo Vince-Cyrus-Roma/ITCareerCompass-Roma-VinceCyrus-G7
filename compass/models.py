@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -61,3 +62,14 @@ class QuizAnswer(models.Model):
 
     class Meta:
         unique_together = ("attempt", "question")
+
+    def clean(self):
+        super().clean()
+        if (
+            self.choice_id
+            and self.question_id
+            and self.choice.question_id != self.question_id
+        ):
+            raise ValidationError(
+                {"choice": "Selected choice does not belong to the specified question."}
+            )
