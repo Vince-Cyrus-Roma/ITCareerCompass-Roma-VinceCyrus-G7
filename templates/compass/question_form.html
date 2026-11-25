@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h4 mb-3">
+          {% if question %}Edit Quiz Question{% else %}Add Quiz Question{% endif %}
+        </h2>
+
+        {% if not has_career_paths %}
+        <div class="alert alert-warning">
+          You need at least one Career Path before adding choices.
+          <a href="{% url 'career_create' %}">Create a career path first</a>.
+        </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.text.id_for_label }}" class="form-label">Question Text</label>
+            {{ form.text }}
+            {% for error in form.text.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label for="{{ form.order.id_for_label }}" class="form-label">Display Order</label>
+              {{ form.order }}
+              {% for error in form.order.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                  Active in quiz
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <h5 class="mb-2">Answer Choices</h5>
+          <p class="text-muted small mb-3">
+            Provide at least 2 answer choices and link each choice to a career path.
+          </p>
+
+          {{ formset.management_form }}
+          {% if formset.non_form_errors %}
+          <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+          {% endif %}
+
+          {% for choice_form in formset %}
+          <div class="card bg-light border mb-2">
+            <div class="card-body py-2 px-3">
+              {{ choice_form.id }}
+              {% if choice_form.non_field_errors %}
+              <div class="text-danger small mb-1">{{ choice_form.non_field_errors }}</div>
+              {% endif %}
+              <div class="row g-2 align-items-center">
+                <div class="col-md-6">
+                  <label class="form-label small mb-1">Choice Text</label>
+                  {{ choice_form.text }}
+                  {% for error in choice_form.text.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small mb-1">Career Path</label>
+                  {{ choice_form.career_path }}
+                  {% for error in choice_form.career_path.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-2">
+                  {% if formset.can_delete and choice_form.instance.pk %}
+                  <div class="form-check mt-4">
+                    {{ choice_form.DELETE }}
+                    <label class="form-check-label text-danger small" for="{{ choice_form.DELETE.id_for_label }}">
+                      Remove
+                    </label>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Save Question</button>
+            <a href="{% url 'admin_panel' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

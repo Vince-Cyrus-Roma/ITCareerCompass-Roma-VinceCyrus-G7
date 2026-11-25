@@ -11,6 +11,10 @@ class CustomUser(AbstractUser):
         max_length=10, choices=Role.choices,
         default=Role.STUDENT)
 
+    @property
+    def is_admin_role(self):
+        return self.is_superuser or self.role == self.Role.ADMIN
+
     def save(self, *args, **kwargs):
         if self.is_superuser:
             self.role = self.Role.ADMIN
