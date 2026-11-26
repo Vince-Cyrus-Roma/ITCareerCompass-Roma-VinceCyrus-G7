@@ -179,7 +179,18 @@ class QuestionDeleteView(AdminRequiredMixin, DeleteView):
         return super().form_valid(form)
 
 
-class QuizTakeView(LoginRequiredMixin, View):
+class StudentRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    def test_func(self):
+        return not self.request.user.is_admin_role
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            messages.error(self.request, "Only Students can take the quiz.")
+            return redirect("dashboard")
+        return super().handle_no_permission() 
+
+
+class QuizTakeView(StudentRequiredMixin, View):
     template_name = "compass/quiz_take.html"
 
     def get_questions(self):
@@ -219,3 +230,38 @@ class QuizTakeView(LoginRequiredMixin, View):
             return redirect("quiz_result", pk=attempt.pk)
         messages.error(request, "Please answer every question before submitting.")
         return render(request, self.template_name, {"form": form})
+
+class QuizResultView(LoginRequiredMixin, DetailView):
+    model = QuizAttempt
+    template_name = "compass/quiz_result.html"
+    context_object_name = "attempt"
+
+    def get_queryset(self):
+        qs = QuizAttempt.objects.select_related("user", "top_career")
+        if self.request.user.is_admin_role:
+            return qs
+        return qs.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        answers = list(
+            self.object.answers.select_related("question", "choice__career_path")
+        )
+        _, breakdown = calculate_career_breakdown([a.choice for a in answers])
+        context["answers"] = answers
+        context["breakdown"] = breakdown
+        return context
+
+class QuizAttemptDeleteView(LoginRequiredMixin, DeleteView):
+    model = QuizAttempt
+    template_name = "compass/attempt_confirm_delete.html"
+    success_url = reverse_lazy("dashboard")
+
+    def get_queryset(self):
+        return QuizAttempt.objects.filter(user=self.request.user)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Quiz attempt deleted.")
+        return super().form_valid(form)
+
+        

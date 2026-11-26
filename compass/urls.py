@@ -9,6 +9,9 @@ from .views import (
     QuestionCreateView,
     QuestionDeleteView,
     QuestionUpdateView,
+    QuizAttemptDeleteView,
+    QuizResultView,
+    QuizTakeView,
 )
 
 urlpatterns = [
@@ -40,4 +43,12 @@ urlpatterns = [
         QuestionDeleteView.as_view(),
         name="question_delete",
     ),
+    path("quiz/", QuizTakeView.as_view(), name="quiz_take"),
+    path("quiz/results/<int:pk>/", QuizResultView.as_view(), name="quiz_result"),
+    path(
+        "quiz/results/<int:pk>/delete/",
+        QuizAttemptDeleteView.as_view(),
+        name="attempt_delete",
+    ),
+
 ]

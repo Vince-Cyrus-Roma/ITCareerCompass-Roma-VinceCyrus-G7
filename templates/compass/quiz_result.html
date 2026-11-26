@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h2 class="mb-1">Your Quiz Results</h2>
+    <p class="text-muted">Taken {{ attempt.created_at|date:"M d, Y H:i" }}</p>
+    {% if user.is_admin_role %}
+    <p class="text-muted">Student: {{ attempt.user.username }}</p>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body text-center">
+        <div class="text-muted">Your top career match</div>
+        <div class="display-6">{{ attempt.top_career.name|default:"No result" }}</div>
+        {% if attempt.top_career.description %}
+        <p class="mt-2 mb-0">{{ attempt.top_career.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h3 class="h5 mb-3">Career breakdown</h3>
+        {% for row in breakdown %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between">
+            <span>{{ row.career.name }}</span>
+            <span>{{ row.count }} answer{{ row.count|pluralize }} ({{ row.percentage }}%)</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: {{ row.percentage }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h3 class="h5 mb-3">Your answers</h3>
+        <ol class="mb-0">
+          {% for answer in answers %}
+          <li class="mb-2">
+            {{ answer.question.text }}<br />
+            <span class="text-muted small">{{ answer.choice.text }} &rarr; {{ answer.choice.career_path.name }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-dark">Back to dashboard</a>
+      {% if attempt.user == user %}
+      <a href="{% url 'quiz_take' %}" class="btn btn-primary">Retake quiz</a>
+      <a href="{% url 'attempt_delete' attempt.pk %}" class="btn btn-outline-danger">Delete this attempt</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
