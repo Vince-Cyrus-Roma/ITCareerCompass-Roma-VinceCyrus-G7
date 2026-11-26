@@ -6,7 +6,7 @@ from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, DeleteView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, TemplateView, UpdateView, DetailView
 
 from accounts.models import CustomUser
 
@@ -15,9 +15,10 @@ from .forms import (
     QuizChoiceCreateFormSet,
     QuizChoiceEditFormSet,
     QuizQuestionForm,
+    QuizTakeForm,
+    calculate_career_breakdown
 )
-from .models import CareerPath, QuizAttempt, QuizQuestion
-
+from .models import CareerPath, QuizAnswer, QuizAttempt, QuizQuestion
 
 class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
@@ -29,11 +30,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user_attempts = QuizAttempt.objects.filter(
+            user=self.request.user
+        ).select_related("top_career")
         context["member_count"] = CustomUser.objects.count()
         context["is_admin"] = self.request.user.is_admin_role
         context["active_question_count"] = QuizQuestion.objects.filter(
-            is_active=True
-        ).count()
+            is_active=True, choices__isnull=False
+        ).distinct().count()
+        context["user_attempts"] = user_attempts
+        context["latest_attempt"] = user_attempts.first()
+        context["attempt_count"] = user_attempts.count()
         return context
 
 
@@ -170,3 +177,45 @@ class QuestionDeleteView(AdminRequiredMixin, DeleteView):
     def form_valid(self, form):
         messages.success(self.request, "Quiz question deleted.")
         return super().form_valid(form)
+
+
+class QuizTakeView(LoginRequiredMixin, View):
+    template_name = "compass/quiz_take.html"
+
+    def get_questions(self):
+        return (
+            QuizQuestion.objects.filter(is_active=True, choices__isnull=False)
+            .distinct()
+            .prefetch_related("choices")
+        )
+
+    def get(self, request):
+        questions = list(self.get_questions())
+        if not questions:
+            messages.warning(request, "The quiz has no questions yet. Please check back later.")
+            return redirect("dashboard")
+        form = QuizTakeForm(questions=questions)
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        questions = list(self.get_questions())
+        form = QuizTakeForm(request.POST, questions=questions)
+        if form.is_valid():
+            pairs = form.get_selected_pairs()
+            with transaction.atomic():
+                attempt = QuizAttempt.objects.create(user=request.user)
+                QuizAnswer.objects.bulk_create(
+                    [
+                        QuizAnswer(attempt=attempt, question=q, choice=c)
+                        for q, c in pairs
+                    ]
+                )
+                top_career, _ = calculate_career_breakdown(
+                    [c for _, c in pairs]
+                )
+                attempt.top_career = top_career
+                attempt.save()
+            messages.success(request, "Quiz submitted! Here are your results.")
+            return redirect("quiz_result", pk=attempt.pk)
+        messages.error(request, "Please answer every question before submitting.")
+        return render(request, self.template_name, {"form": form})
